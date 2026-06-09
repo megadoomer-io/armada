@@ -1,8 +1,6 @@
 """Shared fixtures for Armada tests."""
 
 import pathlib
-import tempfile
-from collections.abc import Generator
 
 import pytest
 
