@@ -173,7 +173,7 @@ def write_config(config: dict[str, object], path: pathlib.Path) -> None:
 def run_fresh_setup() -> None:
     """First-time setup: full interactive config creation."""
     config = build_config()
-    dirs, created = create_directories()
+    directories, _ = create_directories()
     cfg_path = config_dir() / "config.yaml"
     write_config(config, cfg_path)
 
@@ -181,8 +181,8 @@ def run_fresh_setup() -> None:
     print("  Setup Complete")
     print("=" * 50)
     print(f"\n  Config:  {cfg_path}")
-    print(f"  State:   {dirs['state']}")
-    print(f"  Cache:   {dirs['cache']}")
+    print(f"  State:   {directories['state']}")
+    print(f"  Cache:   {directories['cache']}")
     print(f"\n  Upstreams: {len(config.get('upstreams', []))}")
     print(f"  Peers:     {len(config.get('peers', []))}")
     print(f"  Downstreams: {len(config.get('downstreams', []))}")
@@ -202,7 +202,7 @@ def run_upgrade_check() -> None:
     print("=" * 50)
 
     # Ensure directories
-    dirs, created = create_directories()
+    _, created = create_directories()
     if created:
         print(f"\n  Created {len(created)} new directories:")
         for d in created:
