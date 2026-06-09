@@ -2,6 +2,9 @@
 name: armada-propose
 description: Push knowledge proposals to peers and downstream targets as PRs.
 version: 0.1.0
+source:
+  repo: megadoomer-io/armada
+  path: skills/propose.md
 ---
 
 # /armada-propose — Push Proposals to Peers

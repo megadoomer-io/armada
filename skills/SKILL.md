@@ -2,6 +2,9 @@
 name: armada
 description: Collaborative agent knowledge network — sync, propose, and review agent instruction improvements across developers.
 version: 0.1.0
+source:
+  repo: megadoomer-io/armada
+  path: skills/SKILL.md
 ---
 
 # /armada — Agent Knowledge Network

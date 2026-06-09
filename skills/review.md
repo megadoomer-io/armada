@@ -2,6 +2,9 @@
 name: armada-review
 description: Review and disposition incoming knowledge proposals from peers.
 version: 0.1.0
+source:
+  repo: megadoomer-io/armada
+  path: skills/review.md
 ---
 
 # /armada-review — Handle Incoming Proposals

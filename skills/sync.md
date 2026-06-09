@@ -2,6 +2,9 @@
 name: armada-sync
 description: Pull knowledge changes from upstream sources and disposition them.
 version: 0.1.0
+source:
+  repo: megadoomer-io/armada
+  path: skills/sync.md
 ---
 
 # /armada-sync — Pull Knowledge from Upstreams

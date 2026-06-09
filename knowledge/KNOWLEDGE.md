@@ -2,6 +2,9 @@
 name: armada
 description: How the Armada agent knowledge network works - concepts, state layout, and relationship types.
 version: 0.1.0
+source:
+  repo: megadoomer-io/armada
+  path: knowledge/KNOWLEDGE.md
 ---
 
 # Armada Knowledge
