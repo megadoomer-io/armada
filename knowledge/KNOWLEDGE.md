@@ -44,6 +44,23 @@ affecting grain identity.
 Override any path via `ARMADA_CONFIG_DIR`, `ARMADA_STATE_DIR`,
 `ARMADA_CACHE_DIR` environment variables.
 
+### Version Control Recommendation
+
+Since Armada users already manage agent instructions in git, we
+recommend version-controlling the Armada state alongside them:
+
+- **Config** (`~/.config/armada/`): version-control. This is your
+  network identity and relationship definitions.
+- **State** (`~/.local/state/armada/`): version-control. Your grain
+  dispositions and proposal queues are accumulated knowledge that
+  took time to build.
+- **Cache** (`~/.cache/armada/`): do NOT version-control. Clones
+  and comparison caches are ephemeral and regenerated on demand.
+
+The mechanism (stow, chezmoi, bare git repo, manual symlinks) is
+your choice. The important thing is that config and state survive
+across machines and aren't lost to a disk wipe.
+
 ## Commands
 
 | Command | What it does |
