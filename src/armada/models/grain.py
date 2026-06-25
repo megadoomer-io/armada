@@ -36,9 +36,17 @@ class ProposalStatus(enum.StrEnum):
 
 
 class GrainProposal(pydantic.BaseModel):
-    """Tracks a proposal of this grain to another target."""
+    """Tracks a proposal of this grain to another target.
+
+    ``group`` is the single group context the proposal was opened under (the
+    convergence-bearing group when the target is eligible via two groups). It is
+    a scalar, not a list: at most one convergence-bearing group applies per
+    member per grain, so convergence counting stays a simple equality. None for
+    proposals not tied to a group (e.g. a direct downstream convergence push).
+    """
 
     target: str
+    group: str | None = None
     pr_number: int | None = None
     pr_url: str | None = None
     status: ProposalStatus = ProposalStatus.PENDING
@@ -55,11 +63,28 @@ class GrainState(pydantic.BaseModel):
     description: str = ""
     disposition: Disposition | None = None
     disposition_date: datetime.date | None = None
+    audiences: list[str] = pydantic.Field(default_factory=list)
     source_paths: list[str] = pydantic.Field(default_factory=list)
     local_paths: list[str] = pydantic.Field(default_factory=list)
     notes: str = ""
     exclude_until: ExcludeUntil | None = None
     proposed_to: list[GrainProposal] = pydantic.Field(default_factory=list)
+
+    @pydantic.field_validator("audiences")
+    @classmethod
+    def validate_audiences(cls, v: list[str]) -> list[str]:
+        """Keep the audience list well-formed.
+
+        Default ``[]`` means private (shared with no group). The ``"*"`` sentinel
+        means all groups and must stand alone — mixing it with named groups is
+        ambiguous (does it mean "all" or "these specific ones"?), so reject it.
+        """
+        if config.ALL_GROUPS in v and len(v) > 1:
+            raise ValueError(
+                f"audience sentinel {config.ALL_GROUPS!r} (all groups) cannot be "
+                f"combined with specific group names; got {v!r}"
+            )
+        return v
 
 
 class SourceGrainFile(pydantic.BaseModel):

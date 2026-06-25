@@ -81,15 +81,16 @@ def check_staleness() -> str | None:
     if not settings.get("sync_check_on_session_start", True):
         return None
 
-    upstreams = config.get("upstreams", [])
-    if not upstreams:
+    # v2: upstreams are members flagged pull: true, keyed by name.
+    members = config.get("members", {})
+    pull_members = {name: member for name, member in members.items() if member.get("pull")}
+    if not pull_members:
         return None
 
     stale_sources: list[tuple[str, int]] = []
 
-    for upstream in upstreams:
-        name = upstream.get("name", "unknown")
-        repo = upstream.get("repo", "")
+    for name, member in pull_members.items():
+        repo = member.get("repo", "")
         if not repo:
             continue
 
