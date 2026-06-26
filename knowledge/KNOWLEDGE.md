@@ -1,7 +1,7 @@
 ---
 name: armada
-description: How the Armada agent knowledge network works - concepts, state layout, and relationship types.
-version: 0.1.0
+description: How the Armada agent knowledge network works - concepts, state layout, groups, and audiences.
+version: 0.2.0
 source:
   repo: megadoomer-io/armada
   path: knowledge/KNOWLEDGE.md
@@ -25,11 +25,33 @@ affecting grain identity.
 - **Exclude** / **Decline**: not relevant, don't resurface until major change
 - **Defer**: relevant but not now, revisit later
 
-**Relationship types**:
-- **Upstream** (pull): sources you watch. One-directional.
-- **Peer** (propose): bidirectional PR-based exchange.
-- **Downstream** (converge): targets that receive knowledge after
-  peer consensus reaches the convergence threshold.
+**Member**: one canonical record per person (or source repo) — a repo, the
+paths to watch, and a `pull` flag. A member is a **peer** (you propose to them)
+if they belong to at least one group, and an **upstream** (you pull from them)
+if `pull: true`. The two roles are independent: a friend can be pull-capable
+without joining any sharing circle.
+
+**Group**: a named circle of members (e.g. `coworkers`, `friends`) that acts as
+a policy lens. A group gates which grains are eligible to flow to its members
+and pools their accepts for convergence. It may carry a `convergence` block
+(`threshold` + `downstream`); without one it is pure pairwise sharing. A group
+is NOT a state partition — one person in two groups still has a single
+per-member queue. The group changes eligibility and convergence accounting, not
+where state lives.
+
+**Audience**: on a grain, the list of groups it may flow to. Default `[]` means
+private (shared with no one); the `"*"` sentinel means all groups. Absence never
+means broadcast — sharing is opt-in, so work knowledge never leaks to the wrong
+circle by omission.
+
+**Downstream**: a sink repo that receives a grain once a group's convergence
+threshold is reached (e.g. a team-shared knowledge repo).
+
+**Convergence**: per-group consensus. When enough of a group's members accept a
+grain, it is proposed to that group's downstream. Counting keys on the group a
+proposal was opened under, so a grain shared with one circle never converges
+through another — the same person in two groups can't have a friends-context
+accept count toward the coworkers' threshold.
 
 ## State Layout
 
