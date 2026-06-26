@@ -82,6 +82,10 @@ Present to the user with the LLM's comparison analysis.
 **Accept**:
 1. Merge the PR (or approve it for the user to merge)
 2. Update grain state with the accepted grain
+3. Optionally ask which audiences to tag the now-included grain with (group
+   names, or `"*"`), stored on `grain.audiences`, so it can be proposed onward
+   on the next `/armada-sync`. Leave empty to keep it private (included locally,
+   shared with no one) — sharing is opt-in.
 
 **Modify**:
 1. Present the proposed content for editing

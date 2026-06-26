@@ -25,15 +25,19 @@ If config doesn't exist, tell the user to run `/armada setup` and stop.
 
 ### Step 2: For each upstream
 
+Upstreams are members flagged `pull: true` (independent of group membership —
+a friend can be pull-capable without being in a convergence group). The member
+name is the dict key:
+
 ```
-for upstream in cfg.upstreams:
+for name, upstream in cfg.pull_members.items():
 ```
 
 #### 2a. Fetch latest
 
 ```python
 import armada.git.cache as cache
-clone = cache.CacheClone(upstream.name, upstream.repo)
+clone = cache.CacheClone(name, upstream.repo)
 clone.ensure()  # clone if missing, fetch if exists
 current_rev = clone.head_rev()
 ```
@@ -42,7 +46,7 @@ current_rev = clone.head_rev()
 
 ```python
 import armada.models.grain as grain
-sgf = grain.SourceGrainFile.load(upstream.name)
+sgf = grain.SourceGrainFile.load(name)
 ```
 
 If `sgf.last_reviewed_rev` is None, this is the first sync (onboarding).
@@ -66,6 +70,7 @@ changes = filter.structural_pre_filter(
     sgf.last_reviewed_rev,
     paths=upstream.paths or None,
 )
+# (upstream is the Member; name is its dict key from the loop above)
 ```
 
 Report what was filtered:
@@ -105,7 +110,7 @@ import armada.disposition.engine as disposition
 
 ctx = disposition.DispositionContext(
     mode=disposition.DispositionMode.UPSTREAM,
-    source_name=upstream.name,
+    source_name=name,
     grain_id=semantic_id,
     grain_description=llm_summary,
     source_content=content,
@@ -139,6 +144,10 @@ For **Include** decisions:
   and conventions (respecting `cfg.preferences` for tool-specific adapters)
 - Present the adapted content for approval
 - If approved, write to the user's agent instructions repo and commit
+- **Ask the user which audiences to share this grain with** (group names, or
+  `"*"` for all groups). Store on `grain.audiences`. Leaving it empty keeps the
+  grain private — it is included locally but proposed to no one. Sharing is
+  opt-in; absence never means broadcast.
 
 #### 2h. Update state
 
@@ -173,24 +182,34 @@ two structurally different instruction sets.
 
 ### Step 4: Queue peer proposals
 
-After processing all upstreams, for each grain that was **Included**:
-
-1. Check each peer in `cfg.peers`
-2. If the peer doesn't have this grain (check their repo via cache clone):
-   - Add to their proposal queue
+After processing all upstreams, for each grain that was **Included** and given a
+non-empty `audiences`, queue it to the members those audiences resolve to. A
+grain left private (`audiences == []`) is proposed to no one.
 
 ```python
 import armada.models.queue as queue
-q = queue.ProposalQueue.load(peer.name)
-q.pending_proposals.append(
-    queue.PendingProposal(
-        grain_id=grain.semantic_id,
-        description=grain.description,
-        estimated_value=queue.EstimatedValue.HIGH,
+
+eligible_members = {
+    m
+    for group_name in config.resolve_groups(grain.audiences, cfg)
+    for m in cfg.groups[group_name].members
+}
+for member_name in sorted(eligible_members):
+    # Skip if the member already has this grain (check their repo via cache clone).
+    q = queue.ProposalQueue.load(member_name)
+    q.pending_proposals.append(
+        queue.PendingProposal(
+            grain_id=grain.semantic_id,
+            description=grain.description,
+            estimated_value=queue.EstimatedValue.HIGH,
+        )
     )
-)
-q.save()
+    q.save()
 ```
+
+`resolve_groups` maps the grain's audiences to concrete groups (identity map
+today; `"*"` expands to all groups; unknown names are dropped). Convergence and
+downstream pushes are handled later by `/armada-propose`, not here.
 
 ## Error Handling
 
