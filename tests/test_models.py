@@ -132,6 +132,59 @@ class TestArmadaConfig:
         with pytest.raises(pydantic.ValidationError, match="unsupported config version"):
             config_mod.ArmadaConfig.model_validate(data)
 
+    @pytest.mark.unit
+    def test_owner_migrated_config_validates_and_roundtrips(self, xdg_dirs: dict[str, pathlib.Path]) -> None:
+        # Mirrors the owner's migrated live config: james merged to one member
+        # (jameshounshell/dotfiles, pull-capable) in coworkers (converges -> cpe)
+        # AND friends (no convergence); armada as a pull-only upstream; josh as a
+        # peer; cpe downstream. Guards the hand-edit migration in CI.
+        owner_yaml = textwrap.dedent("""\
+            version: 2
+            identity:
+              name: mikedougherty
+              repo: mikedougherty/dotfiles
+              agent_root: ~/.agents/
+            members:
+              james:
+                repo: jameshounshell/dotfiles
+                paths: [claude/]
+                pull: true
+              josh:
+                repo: missionlane-scratch/jhoover
+                paths: [AGENTS.md, github/]
+              armada:
+                repo: megadoomer-io/armada
+                paths: [skills/, knowledge/]
+                pull: true
+            groups:
+              coworkers:
+                members: [james, josh]
+                convergence:
+                  threshold: 2
+                  downstream: cpe
+              friends:
+                members: [james]
+            downstreams:
+              cpe:
+                repo: missionlane-scratch/cpe-agent-knowledge
+                paths: [knowledge/, skills/, rules/]
+        """)
+        cfg = config_mod.ArmadaConfig.model_validate(yaml.safe_load(owner_yaml))
+
+        assert set(cfg.pull_members) == {"james", "armada"}
+        assert cfg.members["james"].repo == "jameshounshell/dotfiles"
+        assert "james" in cfg.groups["coworkers"].members
+        assert "james" in cfg.groups["friends"].members
+        assert cfg.proposal_group_for("james", ["coworkers", "friends"]) == "coworkers"
+
+        config_path = xdg_dirs["config"] / "config.yaml"
+        cfg.save(config_path)
+        loaded = config_mod.ArmadaConfig.load(config_path)
+        assert set(loaded.members) == {"james", "josh", "armada"}
+        assert loaded.groups["coworkers"].convergence is not None
+        assert loaded.groups["coworkers"].convergence.downstream == "cpe"
+        assert loaded.groups["friends"].convergence is None
+
 
 class TestModelValidator:
     @pytest.mark.unit
