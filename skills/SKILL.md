@@ -1,7 +1,7 @@
 ---
 name: armada
 description: Collaborative agent knowledge network — sync, propose, and review agent instruction improvements across developers.
-version: 0.1.0
+version: 0.2.0
 source:
   repo: megadoomer-io/armada
   path: skills/SKILL.md
@@ -35,11 +35,11 @@ When invoked without a subcommand, present a summary:
 
 1. **Read config** from `$XDG_CONFIG_HOME/armada/config.yaml`
    - If config doesn't exist, suggest running `/armada setup`
-2. **Check sync staleness** for each upstream:
+2. **Check sync staleness** for each pull-enabled member (`pull: true`):
    - Read `$XDG_STATE_HOME/armada/grains/<source>.yaml`
    - Compare `last_reviewed_rev` against the remote HEAD (via cache clone fetch)
    - Report: "james: 3 changes since last sync (2 days ago)"
-3. **Check proposal queues** for each peer/downstream:
+3. **Check proposal queues** for each peer (group member) and downstream:
    - Read `$XDG_STATE_HOME/armada/queues/<target>.yaml`
    - Report: "james: 1 open PR, 2 pending proposals"
 4. **Check incoming proposals** on the user's repo:
@@ -71,7 +71,7 @@ Run /armada sync to pull upstream changes.
 guided editing:
 
 1. Show current config summary
-2. Offer to add/remove upstreams, peers, or downstreams
+2. Offer to add/remove members, groups (and their convergence), or downstreams
 3. Offer to adjust settings (max_open_proposals, batch_size, etc.)
 4. Write updated config
 

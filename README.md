@@ -12,19 +12,19 @@ If your agent instructions aren't in git yet, Armada isn't useful to you. Versio
 
 ## How the graph works
 
-Three relationship types form a directed graph:
+Your config is a registry of **members** (other people's instruction repos) organized into **groups** (named circles like `coworkers` or `friends`). Three nouns:
 
-- **Upstream** (pull): sources you watch for knowledge to incorporate. One-directional. You learn from them; they don't need to know you exist.
-- **Peer** (propose): bidirectional PR-based knowledge exchange. You send proposals to each other. This is the collaborative part.
-- **Downstream** (converge): targets that receive knowledge after multiple peers agree on it. Useful for team-shared instruction sets that should only adopt changes with consensus.
+- **Members**: one record per person — their repo, the paths worth watching, and whether you **pull** from them. A member you pull from is an *upstream* (you learn from them; they don't need to know you exist). A member in one of your groups is a *peer* (you send them PR proposals). The two roles are independent.
+- **Groups**: named circles that act as policy lenses. You share a grain with a group by tagging it with that group's name (its *audience*). One person can belong to two groups — a coworker and a friend — and receive different content through each, with no leakage between them. A group can carry a **convergence** rule: once enough of its members accept a grain, it's promoted to a shared **downstream** repo.
+- **Downstreams**: sink repos (e.g. a team-shared knowledge base) that receive a grain after a group reaches consensus.
 
-Each person's config file declares their own edges in the graph. There's no global registry. The network topology emerges from individual decisions about who to watch and who to exchange with.
+Grains default to private — you opt a grain into a circle by setting its audience, and nothing is broadcast by omission, so work knowledge never reaches the wrong circle by accident. Each person's config declares their own edges; there's no global registry, and the topology emerges from individual decisions about who to watch and who to share with.
 
 ## Onboarding
 
 ### Option A: Someone you know already uses Armada
 
-The easiest path. Ask them to run `/armada propose` with your repo as a peer target. You'll get a PR on your agent instructions repo containing the Armada skill files and a starter config. Review it, merge it, and you're in the network.
+The easiest path. Ask them to add you as a member of one of their groups and run `/armada propose`. You'll get a PR on your agent instructions repo containing the Armada skill files and a starter config. Review it, merge it, and you're in the network.
 
 This is the curated path: a human you trust reviewed what to send you, and you review what to accept. Slow, deliberate, and low-risk.
 
