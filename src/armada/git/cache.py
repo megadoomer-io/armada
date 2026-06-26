@@ -144,8 +144,6 @@ class CacheClone:
             )
             return result.stdout if capture else ""
         except subprocess.CalledProcessError as e:
-            raise CacheCloneError(
-                f"Git command failed: {' '.join(cmd)}\nstderr: {e.stderr}"
-            ) from e
+            raise CacheCloneError(f"Git command failed: {' '.join(cmd)}\nstderr: {e.stderr}") from e
         except subprocess.TimeoutExpired as e:
             raise CacheCloneError(f"Git command timed out after 120s: {' '.join(cmd)}") from e

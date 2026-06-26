@@ -52,10 +52,7 @@ def chunk_changes(
 
     local = local_contents or {}
 
-    meaningful = [
-        c for c in changes
-        if c.kind in (filter_mod.ChangeKind.CONTENT_DELTA, filter_mod.ChangeKind.NEW_FILE)
-    ]
+    meaningful = [c for c in changes if c.kind in (filter_mod.ChangeKind.CONTENT_DELTA, filter_mod.ChangeKind.NEW_FILE)]
 
     if not meaningful:
         return []
@@ -83,12 +80,14 @@ def chunk_changes(
             for change in group_changes:
                 single_source = {change.path: source_contents[change.path]} if change.path in source_contents else {}
                 single_local = {change.path: local.get(change.path)}
-                chunks.append(ComparisonChunk(
-                    source_name=source_name,
-                    changes=[change],
-                    source_contents=single_source,
-                    local_contents=single_local,
-                ))
+                chunks.append(
+                    ComparisonChunk(
+                        source_name=source_name,
+                        changes=[change],
+                        source_contents=single_source,
+                        local_contents=single_local,
+                    )
+                )
 
     return chunks
 

@@ -135,9 +135,7 @@ class TestCacheClone:
         assert len(head) == 40
 
     @pytest.mark.integration
-    def test_fetch(
-        self, fixture_repo: tuple[pathlib.Path, pathlib.Path, str], tmp_path: pathlib.Path
-    ) -> None:
+    def test_fetch(self, fixture_repo: tuple[pathlib.Path, pathlib.Path, str], tmp_path: pathlib.Path) -> None:
         bare, work, _ = fixture_repo
         cache_root = tmp_path / "cache"
         cache_root.mkdir()
@@ -168,9 +166,7 @@ class TestCacheClone:
         assert clone.exists
 
     @pytest.mark.integration
-    def test_diff_names(
-        self, fixture_repo: tuple[pathlib.Path, pathlib.Path, str], tmp_path: pathlib.Path
-    ) -> None:
+    def test_diff_names(self, fixture_repo: tuple[pathlib.Path, pathlib.Path, str], tmp_path: pathlib.Path) -> None:
         bare, work, initial_sha = fixture_repo
         _commit_file(work, "knowledge/new.md", "# New\n", "Add new")
 
@@ -183,9 +179,7 @@ class TestCacheClone:
         assert "knowledge/new.md" in changed
 
     @pytest.mark.integration
-    def test_show_file(
-        self, fixture_repo: tuple[pathlib.Path, pathlib.Path, str], tmp_path: pathlib.Path
-    ) -> None:
+    def test_show_file(self, fixture_repo: tuple[pathlib.Path, pathlib.Path, str], tmp_path: pathlib.Path) -> None:
         bare, _, _ = fixture_repo
         cache_root = tmp_path / "cache"
         cache_root.mkdir()
@@ -201,9 +195,7 @@ class TestCacheClone:
         assert missing is None
 
     @pytest.mark.integration
-    def test_detect_renames(
-        self, fixture_repo: tuple[pathlib.Path, pathlib.Path, str], tmp_path: pathlib.Path
-    ) -> None:
+    def test_detect_renames(self, fixture_repo: tuple[pathlib.Path, pathlib.Path, str], tmp_path: pathlib.Path) -> None:
         bare, work, initial_sha = fixture_repo
         _rename_file(work, "skills/pr-scan.md", "skills/pr-discovery.md", "Rename pr-scan")
 
@@ -222,9 +214,7 @@ class TestCacheClone:
 
 class TestStructuralPreFilter:
     @pytest.mark.integration
-    def test_new_file(
-        self, fixture_repo: tuple[pathlib.Path, pathlib.Path, str], tmp_path: pathlib.Path
-    ) -> None:
+    def test_new_file(self, fixture_repo: tuple[pathlib.Path, pathlib.Path, str], tmp_path: pathlib.Path) -> None:
         bare, work, initial_sha = fixture_repo
         _commit_file(work, "knowledge/helm.md", "# Helm\n\nUse app-template.\n", "Add helm")
 
@@ -238,9 +228,7 @@ class TestStructuralPreFilter:
         assert any(c.path == "knowledge/helm.md" for c in new_files)
 
     @pytest.mark.integration
-    def test_deleted_file(
-        self, fixture_repo: tuple[pathlib.Path, pathlib.Path, str], tmp_path: pathlib.Path
-    ) -> None:
+    def test_deleted_file(self, fixture_repo: tuple[pathlib.Path, pathlib.Path, str], tmp_path: pathlib.Path) -> None:
         bare, work, initial_sha = fixture_repo
         _delete_file(work, "skills/pr-scan.md", "Remove pr-scan")
 
@@ -254,9 +242,7 @@ class TestStructuralPreFilter:
         assert any(c.path == "skills/pr-scan.md" for c in deleted)
 
     @pytest.mark.integration
-    def test_rename_only(
-        self, fixture_repo: tuple[pathlib.Path, pathlib.Path, str], tmp_path: pathlib.Path
-    ) -> None:
+    def test_rename_only(self, fixture_repo: tuple[pathlib.Path, pathlib.Path, str], tmp_path: pathlib.Path) -> None:
         bare, work, initial_sha = fixture_repo
         _rename_file(work, "skills/pr-scan.md", "skills/pr-discovery.md", "Rename only")
 
@@ -271,9 +257,7 @@ class TestStructuralPreFilter:
         assert rename_changes[0].old_path == "skills/pr-scan.md"
 
     @pytest.mark.integration
-    def test_content_delta(
-        self, fixture_repo: tuple[pathlib.Path, pathlib.Path, str], tmp_path: pathlib.Path
-    ) -> None:
+    def test_content_delta(self, fixture_repo: tuple[pathlib.Path, pathlib.Path, str], tmp_path: pathlib.Path) -> None:
         bare, work, initial_sha = fixture_repo
         _commit_file(
             work,
@@ -325,9 +309,7 @@ class TestStructuralPreFilter:
         assert any(c.path == "knowledge/kubernetes.md" for c in ws)
 
     @pytest.mark.integration
-    def test_path_filtering(
-        self, fixture_repo: tuple[pathlib.Path, pathlib.Path, str], tmp_path: pathlib.Path
-    ) -> None:
+    def test_path_filtering(self, fixture_repo: tuple[pathlib.Path, pathlib.Path, str], tmp_path: pathlib.Path) -> None:
         bare, work, initial_sha = fixture_repo
         _commit_file(work, "knowledge/helm.md", "# Helm\n", "Add helm")
         _commit_file(work, "unrelated/config.md", "# Config\n", "Add config")
