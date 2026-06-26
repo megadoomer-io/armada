@@ -102,10 +102,7 @@ def build_presentation(ctx: DispositionContext) -> DispositionPresentation:
         body_parts.append(f"Changes: {ctx.diff_summary}")
     body = "\n".join(body_parts)
 
-    options = [
-        (decision, labels[decision], descriptions[decision])
-        for decision in DispositionDecision
-    ]
+    options = [(decision, labels[decision], descriptions[decision]) for decision in DispositionDecision]
 
     return DispositionPresentation(
         context=ctx,

@@ -7,7 +7,7 @@ _ONBOARDING_INSTRUCTIONS = (
     " doesn't have, or where the source has a meaningfully"
     " different approach:\n"
     "\n"
-    '1. Assign a semantic_id (lowercase-kebab-case, e.g.,'
+    "1. Assign a semantic_id (lowercase-kebab-case, e.g.,"
     ' "kustomize-patch-strategy")\n'
     "2. Write a 1-2 sentence description of what the knowledge"
     " covers\n"
@@ -70,10 +70,7 @@ def build_chunk_prompt(chunk: chunked_mod.ComparisonChunk) -> str:
     Smaller and cheaper than onboarding: only the changed files,
     with local equivalents for context.
     """
-    source_files = "\n\n".join(
-        f"### {path}\n```\n{content}\n```"
-        for path, content in chunk.source_contents.items()
-    )
+    source_files = "\n\n".join(f"### {path}\n```\n{content}\n```" for path, content in chunk.source_contents.items())
 
     local_files = ""
     has_local = any(v is not None for v in chunk.local_contents.values())
@@ -83,10 +80,7 @@ def build_chunk_prompt(chunk: chunked_mod.ComparisonChunk) -> str:
             if content is not None:
                 local_parts.append(f"### {path}\n```\n{content}\n```")
         if local_parts:
-            local_files = (
-                "\n\n## Your related instructions\n\n"
-                + "\n\n".join(local_parts)
-            )
+            local_files = "\n\n## Your related instructions\n\n" + "\n\n".join(local_parts)
 
     change_type = "new files" if chunk.is_new_file_only else "changed files"
 
