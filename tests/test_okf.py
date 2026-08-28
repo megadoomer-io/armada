@@ -107,3 +107,42 @@ def test_output_is_structurally_conformant() -> None:
     fm = yaml.safe_load(text.split("---", 2)[1])
     assert fm.get("type")  # §11: non-empty type is the one hard requirement
     assert fm["semantic_id"]  # D1: canonical identity present
+
+
+def test_wire_projection_drops_sender_local_fields() -> None:
+    """The wire projection (include_local=False) is what travels in a proposal:
+    shared knowledge + provenance + trust, but none of the sender's local ledger."""
+    text = okf.to_okf(
+        _sample_grain(),
+        generated_by="human:mikedougherty",
+        generated_at=datetime.date(2026, 8, 18),
+        include_local=False,
+    )
+    fm = yaml.safe_load(text.split("---", 2)[1])
+    # Shared knowledge + provenance + trust travel:
+    assert fm["type"] == "Grain"
+    assert fm["kind"] == "knowledge"
+    assert fm["description"]
+    assert fm["semantic_id"] == "kustomize-patch-strategy"
+    assert fm["generated"]["by"] == "human:mikedougherty"
+    assert fm["verified"][0]["by"] == "human:james"  # convergence still travels
+    assert fm["sources"][0]["resource"]
+    # Sender-local ledger does NOT travel:
+    for local in ("disposition", "disposition_date", "audiences", "exclude_until", "local_paths", "notes"):
+        assert local not in fm, f"{local} must not travel in the wire projection"
+
+
+def test_wire_projection_still_conformant_and_round_trips() -> None:
+    text = okf.to_okf(
+        _sample_grain(),
+        generated_by="human:me",
+        generated_at=datetime.date(2026, 8, 18),
+        include_local=False,
+    )
+    parsed = okf.from_okf(text)
+    assert parsed.grain.semantic_id == "kustomize-patch-strategy"
+    assert parsed.grain.kind == "knowledge"
+    # accepted proposal (convergence) survived; local fields are absent/empty
+    assert len(parsed.grain.proposed_to) == 1
+    assert parsed.grain.disposition is None
+    assert parsed.grain.audiences == []
