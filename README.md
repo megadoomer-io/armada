@@ -81,6 +81,33 @@ Armada follows XDG conventions. Everything is local to your machine.
 
 Config and state are worth version-controlling. Cache is disposable.
 
+## The wire format: OKF
+
+Grains travel as [OKF v0.2](https://github.com/GoogleCloudPlatform/open-knowledge-format)
+concepts — a directory of markdown files with YAML frontmatter, vendor-neutral and
+translator-free. A grain becomes `grains/<semantic_id>.md` with `type: Grain`; provenance
+(`sources`), authorship (`generated`), and accrued trust (`verified[]`, each accept tagged with
+its group) ride in the frontmatter. A peer receives a self-describing concept and consumes it
+with any OKF tool — no per-repo adaptation. `armada.okf.to_okf()` / `from_okf()` render and parse;
+`convergence_view()` reads the per-group accept-vs-threshold trust state that `verified[]` encodes.
+
+### Visualize the network
+
+Export your grains as an OKF bundle and render it with the
+[okf-skills](https://github.com/scaccogatto/okf-skills) toolchain:
+
+```python
+import datetime, armada.okf as okf
+okf.export_bundle(my_grains, ".okf", generated_by="human:me", generated_at=datetime.date.today())
+```
+
+```bash
+# interactive graph (trust tiers + provenance + backlinks, derived at render time)
+uv run <okf-skills>/skills/visualize/scripts/okf_visualize.py .okf -o viz.html
+# conformance gate (also runs in CI via the test suite)
+uv run <okf-skills>/skills/validate/scripts/okf_validate.py .okf --strict
+```
+
 ## Development
 
 ```bash
