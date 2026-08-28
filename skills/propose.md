@@ -103,24 +103,47 @@ Decision tree:
 
 For the next pending proposal (highest priority):
 
-1. **Read the target's repo structure** via cache clone to understand their
-   conventions (file naming, directory layout, frontmatter format)
+1. **Render the grain as an OKF concept (the wire format).** A grain travels as a
+   conformant [OKF v0.2](https://github.com/GoogleCloudPlatform/open-knowledge-format)
+   concept — translator-free, self-describing (provenance + trust), and consumable by
+   standard OKF tooling on the far side. Use the wire projection, which carries the shared
+   knowledge + provenance + trust but none of your local ledger:
 
-2. **Ask the LLM to adapt** the grain content to the target's structure:
+   ```python
+   import datetime
+   import armada.okf as okf
 
-   > Adapt this knowledge for {target_name}'s agent instructions repo.
-   > Their structure uses: {observed conventions}.
-   > Write the content as it should appear in their repo.
-   > Respect their existing patterns for file naming and organization.
+   concept = okf.to_okf(
+       grain,
+       generated_by=f"human:{cfg.identity.name}",
+       generated_at=datetime.date.today(),
+       body=<the grain's knowledge content, read from its local_paths>,
+       include_local=False,   # wire projection: drop disposition/audiences/notes/etc.
+   )
+   ```
 
-3. **Determine target path**: Where should this file go in the target's repo?
-   The LLM decides based on the target's directory structure.
+   The grain's `verified[]` (accepted proposals, each with its `group`) rides along, so the
+   receiver sees who has already accepted it and in which circle.
+
+2. **Determine target path.** Prefer the target's OKF bundle: the concept ID is
+   `grains/{grain.semantic_id}` (D1), so the file is `<bundle>/grains/{semantic_id}.md`
+   (e.g. `.okf/grains/{semantic_id}.md`, or the OKF dir named in their config).
+   **Fallback (target has no OKF bundle):** adapt the grain to their ad-hoc conventions as
+   before (read their structure, LLM-adapt, place by their layout) — a transition path until
+   the target adopts OKF.
+
+3. **Validate before opening** (if okf-skills is available): run the standalone checker on the
+   proposed concept so a malformed grain never reaches a peer:
+
+   ```shell
+   uv run <okf-skills>/skills/validate/scripts/okf_validate.py <target-bundle> --strict
+   ```
 
 4. **Open the PR**:
    - Branch: `armada/{cfg.identity.name}/{grain_slug}`
    - Title: descriptive, based on the grain content
    - Label: `armada` (best-effort, skip if permissions deny)
-   - Body: includes provenance and description
+   - Body: includes provenance and description (see format below)
 
 #### PR Description Format
 
@@ -136,13 +159,14 @@ For the next pending proposal (highest priority):
 
 ### Provenance
 
-This knowledge was sourced from @{source_user}'s agent instructions
-and adapted to your repo's structure and conventions.
+This knowledge was sourced from @{source_user}'s agent instructions and shipped as a
+conformant OKF v0.2 concept (`grains/{semantic_id}.md`) — provenance and trust travel in
+the frontmatter (`generated`, `verified`, `sources`), no per-repo translation required.
 
 ### How to Review
 
-1. Read the proposed file for accuracy and relevance
-2. Check that it fits your repo's conventions
+1. Read the proposed concept for accuracy and relevance
+2. It's a standard OKF concept — validate/visualize it with any OKF tooling if you like
 3. Merge if useful, close with a comment if not
 
 ---

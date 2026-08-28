@@ -37,6 +37,23 @@ If no incoming proposals found, report "No incoming proposals" and stop.
 - Extract the grain semantic_id from the PR description or branch name
 - Read the proposed file content
 
+If the proposed file is an OKF concept (armada ships grains as OKF v0.2 concepts —
+`grains/{semantic_id}.md`, `type: Grain`), parse it to recover the grain metadata,
+provenance, and the trust already accrued from other members:
+
+```python
+import armada.okf as okf
+
+parsed = okf.from_okf(proposed_file_text)
+grain = parsed.grain                     # semantic_id, kind, description, sources, ...
+body = parsed.body                       # the knowledge content to review
+already_accepted = grain.proposed_to     # verified[] -> who accepted, in which group
+```
+
+`already_accepted` (the concept's `verified[]`) shows which peers have already accepted
+this grain and in which group — useful context for your own disposition. A non-OKF file
+(legacy/adapted proposal) is read as plain content, as before.
+
 #### 2b. Compare against local instructions
 
 Check if the user already has related knowledge:
