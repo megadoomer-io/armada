@@ -50,6 +50,9 @@ class GrainProposal(pydantic.BaseModel):
     pr_number: int | None = None
     pr_url: str | None = None
     status: ProposalStatus = ProposalStatus.PENDING
+    accepted_at: datetime.date | None = None
+    """Date the target accepted this proposal. Populates the OKF `verified[].at`
+    trust signal on export; None until accepted."""
 
 
 class GrainState(pydantic.BaseModel):
@@ -61,6 +64,9 @@ class GrainState(pydantic.BaseModel):
 
     semantic_id: str
     description: str = ""
+    kind: str | None = None
+    """The grain's underlying nature (rule | knowledge | skill), carried as the OKF
+    `kind:` extension key alongside `type: Grain`. Optional; None omits it on export."""
     disposition: Disposition | None = None
     disposition_date: datetime.date | None = None
     audiences: list[str] = pydantic.Field(default_factory=list)
