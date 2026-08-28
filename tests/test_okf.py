@@ -1,11 +1,33 @@
 """Tests for the OKF v0.2 grain wire-format serializers."""
 
 import datetime
+import textwrap
 
 import yaml
 
+import armada.models.config as config_mod
 import armada.models.grain as grain_mod
 import armada.okf as okf
+
+
+def _convergence_cfg() -> config_mod.ArmadaConfig:
+    return config_mod.ArmadaConfig.model_validate(
+        yaml.safe_load(
+            textwrap.dedent("""\
+            version: 2
+            identity: { name: mikedougherty, repo: mikedougherty/dotfiles }
+            members:
+              james: { repo: james/dotfiles }
+              josh: { repo: josh/dotfiles }
+            groups:
+              coworkers:
+                members: [james, josh]
+                convergence: { threshold: 2, downstream: cpe }
+            downstreams:
+              cpe: { repo: missionlane-scratch/cpe }
+            """)
+        )
+    )
 
 
 def _sample_grain() -> grain_mod.GrainState:
@@ -146,3 +168,64 @@ def test_wire_projection_still_conformant_and_round_trips() -> None:
     assert len(parsed.grain.proposed_to) == 1
     assert parsed.grain.disposition is None
     assert parsed.grain.audiences == []
+
+
+def test_trust_tier_derives_from_accepts() -> None:
+    g = grain_mod.GrainState(semantic_id="x")
+    assert okf.trust_tier(g) == okf.TRUST_UNVERIFIED
+    g.proposed_to.append(
+        grain_mod.GrainProposal(
+            target="james", group="coworkers", status=grain_mod.ProposalStatus.ACCEPTED
+        )
+    )
+    assert okf.trust_tier(g) == okf.TRUST_HUMAN_REVIEWED
+
+
+def test_convergence_view_equals_verified_entries() -> None:
+    """The OKF trust view and armada convergence read the same signal: verified[] entries
+    tagged with a group ARE that group's accept count toward its threshold."""
+    cfg = _convergence_cfg()
+    g = grain_mod.GrainState(
+        semantic_id="kustomize-patch-strategy",
+        audiences=["coworkers"],
+        proposed_to=[
+            grain_mod.GrainProposal(target="james", group="coworkers", status=grain_mod.ProposalStatus.ACCEPTED),
+            grain_mod.GrainProposal(target="josh", group="coworkers", status=grain_mod.ProposalStatus.ACCEPTED),
+        ],
+    )
+    view = okf.convergence_view(g, cfg)
+    assert len(view) == 1
+    gv = view[0]
+    assert (gv.group, gv.accepts, gv.threshold, gv.converged) == ("coworkers", 2, 2, True)
+
+    # Equivalence: coworkers-tagged verified[] entries in the OKF output == accepts.
+    text = okf.to_okf(g, generated_by="human:me", generated_at=datetime.date(2026, 8, 18))
+    fm = yaml.safe_load(text.split("---", 2)[1])
+    coworker_verified = [v for v in fm["verified"] if v.get("group") == "coworkers"]
+    assert len(coworker_verified) == gv.accepts
+
+
+def test_export_bundle_writes_conformant_bundle(tmp_path) -> None:
+    grains = [
+        grain_mod.GrainState(semantic_id="kustomize-patch-strategy", description="Patch strategy", kind="knowledge"),
+        grain_mod.GrainState(semantic_id="verify-assumptions", description="Verify before acting", kind="rule"),
+    ]
+    out = okf.export_bundle(
+        grains,
+        tmp_path / "bundle",
+        generated_by="human:mikedougherty",
+        generated_at=datetime.date(2026, 8, 18),
+        bodies={"kustomize-patch-strategy": "# Patch strategy\n\nStrategic-merge by default."},
+    )
+    assert (out / "index.md").exists()
+    assert (out / "grains" / "kustomize-patch-strategy.md").exists()
+    assert (out / "grains" / "verify-assumptions.md").exists()
+
+    index = (out / "index.md").read_text()
+    assert 'okf_version: "0.2"' in index
+    assert "grains/kustomize-patch-strategy.md" in index
+    assert "grains/verify-assumptions.md" in index
+
+    parsed = okf.from_okf((out / "grains" / "kustomize-patch-strategy.md").read_text())
+    assert parsed.grain.semantic_id == "kustomize-patch-strategy"
+    assert "Strategic-merge by default." in parsed.body

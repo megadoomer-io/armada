@@ -93,6 +93,22 @@ Read the file content from the cache clone:
 content = clone.show_file(change.path)
 ```
 
+If the upstream stores this grain as an OKF concept (`type: Grain` frontmatter — an
+OKF-adopting upstream), parse it to lift the pre-assigned `semantic_id`, provenance, and any
+trust it already carries, instead of re-deriving from raw text:
+
+```python
+import armada.okf as okf
+
+if content.lstrip().startswith("---"):
+    try:
+        parsed = okf.from_okf(content)
+        semantic_id = parsed.grain.semantic_id  # authoritative, survives renames
+        content = parsed.body                    # the knowledge to analyze
+    except ValueError:
+        pass  # not an OKF concept — fall through to plain-text analysis
+```
+
 Ask the LLM to analyze the change. The prompt should include:
 - The source file content
 - The user's existing related instructions (if any local_paths exist for this grain)

@@ -24,14 +24,22 @@ them into datetime objects.
 
 import dataclasses
 import datetime
+import pathlib
 from typing import Any
 
 import yaml
 
+import armada.convergence as convergence_mod
+import armada.models.config as config_mod
 import armada.models.grain as grain_mod
 
 OKF_TYPE = "Grain"
 _HUMAN = "human:"
+
+# OKF v0.2 §5.3 trust tiers, lowest to highest.
+TRUST_UNVERIFIED = "unverified"
+TRUST_MACHINE_CONFIRMED = "machine-confirmed"
+TRUST_HUMAN_REVIEWED = "human-reviewed"
 
 
 def _rfc3339(d: datetime.date) -> str:
@@ -164,3 +172,88 @@ def from_okf(text: str) -> ParsedGrain:
         generated_by=generated.get("by"),
         generated_at=datetime.date.fromisoformat(str(generated_at)[:10]) if generated_at else None,
     )
+
+
+def trust_tier(grain: grain_mod.GrainState) -> str:
+    """The OKF v0.2 §5.3 trust tier derived from a grain's accepted proposals.
+
+    A grain's accepted proposals ARE the OKF `verified[]` entries (see :func:`to_okf`).
+    §5.3: no verifier -> unverified; only non-`human:` verifiers -> machine-confirmed; any
+    `human:` verifier -> human-reviewed. Armada acceptances are `human:<member>` actors, so a
+    grain with any accepted proposal is human-reviewed. Derived, never stored (§5.3).
+    """
+    accepted = [p for p in grain.proposed_to if p.status is grain_mod.ProposalStatus.ACCEPTED]
+    if not accepted:
+        return TRUST_UNVERIFIED
+    return TRUST_HUMAN_REVIEWED
+
+
+@dataclasses.dataclass
+class GroupConvergence:
+    """Per-group convergence state — the trust view over a grain's `verified[]`."""
+
+    group: str
+    accepts: int
+    threshold: int
+    converged: bool
+
+
+def convergence_view(grain: grain_mod.GrainState, cfg: config_mod.ArmadaConfig) -> list[GroupConvergence]:
+    """Per-group accept counts vs thresholds — the OKF reading of armada convergence.
+
+    The `verified[]` entries `to_okf` emits, grouped by their `group` field, are exactly the
+    accepts :func:`armada.convergence.accept_count` counts toward each group's threshold. This
+    function surfaces that shared signal as a trust view: for every convergence-bearing group the
+    grain is currently eligible for, how many accepts it has and whether it has converged.
+    """
+    view: list[GroupConvergence] = []
+    for group_name in sorted(config_mod.resolve_groups(grain.audiences, cfg)):
+        convergence = cfg.groups[group_name].convergence
+        if convergence is None:
+            continue
+        accepts = convergence_mod.accept_count(grain, group_name)
+        view.append(
+            GroupConvergence(
+                group=group_name,
+                accepts=accepts,
+                threshold=convergence.threshold,
+                converged=accepts >= convergence.threshold,
+            )
+        )
+    return view
+
+
+def export_bundle(
+    grains: list[grain_mod.GrainState],
+    out_dir: pathlib.Path | str,
+    *,
+    generated_by: str,
+    generated_at: datetime.date,
+    bodies: dict[str, str] | None = None,
+    include_local: bool = False,
+) -> pathlib.Path:
+    """Write ``grains`` as an OKF v0.2 bundle for validation/visualization.
+
+    Produces ``<out_dir>/grains/<semantic_id>.md`` per grain plus a root ``index.md`` (carrying
+    ``okf_version``). The result is a conformant bundle any OKF tool consumes — e.g. okf-skills
+    ``visualize`` renders it as an interactive graph, ``validate`` gates it. ``bodies`` maps a
+    semantic_id to its knowledge content; ``include_local`` defaults False (the shareable wire view).
+    Returns the bundle directory.
+    """
+    out = pathlib.Path(out_dir)
+    (out / "grains").mkdir(parents=True, exist_ok=True)
+    entries: list[str] = []
+    for grain in grains:
+        concept = to_okf(
+            grain,
+            generated_by=generated_by,
+            generated_at=generated_at,
+            body=(bodies or {}).get(grain.semantic_id, ""),
+            include_local=include_local,
+        )
+        (out / "grains" / f"{grain.semantic_id}.md").write_text(concept, encoding="utf-8")
+        desc = f" - {grain.description}" if grain.description else ""
+        entries.append(f"* [{grain.semantic_id}](grains/{grain.semantic_id}.md){desc}")
+    index = '---\nokf_version: "0.2"\n---\n\n# Grains\n\n' + "\n".join(entries) + "\n"
+    (out / "index.md").write_text(index, encoding="utf-8")
+    return out

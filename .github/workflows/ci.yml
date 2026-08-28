@@ -1,0 +1,20 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Install dependencies
+        run: make deps
+      - name: Validate (lint + typecheck + test)
+        # `make test` runs the suite, including tests/test_okf.py — the OKF v0.2
+        # conformance gate (§11 + timestamp rules on generated grains). A grain that
+        # would serialize non-conformant fails CI here.
+        run: make validate
