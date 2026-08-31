@@ -67,6 +67,9 @@ class GrainState(pydantic.BaseModel):
     kind: str | None = None
     """The grain's underlying nature (rule | knowledge | skill), carried as the OKF
     `kind:` extension key alongside `type: Grain`. Optional; None omits it on export."""
+    tags: list[str] = pydantic.Field(default_factory=list)
+    """Free-form topic tags describing the grain's content. Shareable metadata: it
+    travels in the wire view and populates the OKF recommended `tags:` field (§4.1)."""
     disposition: Disposition | None = None
     disposition_date: datetime.date | None = None
     audiences: list[str] = pydantic.Field(default_factory=list)

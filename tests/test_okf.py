@@ -35,6 +35,7 @@ def _sample_grain() -> grain_mod.GrainState:
         semantic_id="kustomize-patch-strategy",
         description="Prefer strategic-merge patches; JSON6902 only for list-item edits.",
         kind="knowledge",
+        tags=["kustomize", "kubernetes"],
         disposition=grain_mod.Disposition.INCLUDE,
         disposition_date=datetime.date(2026, 8, 20),
         audiences=["coworkers"],
@@ -74,6 +75,7 @@ def test_round_trip_preserves_mapped_fields() -> None:
     assert out.semantic_id == grain.semantic_id
     assert out.description == grain.description
     assert out.kind == grain.kind
+    assert out.tags == grain.tags
     assert out.disposition == grain.disposition
     assert out.disposition_date == grain.disposition_date
     assert out.audiences == grain.audiences
@@ -123,6 +125,26 @@ def test_accepted_proposals_reconstruct_from_verified() -> None:
     assert accepted[0].accepted_at == datetime.date(2026, 8, 22)
 
 
+def test_recommended_fields_present_clears_strict_warnings() -> None:
+    """title/description/tags are the OKF recommended fields (§4.1). The validator
+    warns when the KEY is absent, so title is always derived and tags is always
+    emitted (empty list when there are none) to keep `--strict` clean."""
+    # A grain with tags: title derived from semantic_id, tags carried through.
+    text = okf.to_okf(_sample_grain(), generated_by="human:me", generated_at=datetime.date(2026, 8, 18))
+    fm = yaml.safe_load(text.split("---", 2)[1])
+    assert fm["title"] == "Kustomize Patch Strategy"
+    assert fm["tags"] == ["kustomize", "kubernetes"]
+    assert "description" in fm
+
+    # A grain with no tags: the key is still present (empty list), not absent.
+    bare = grain_mod.GrainState(semantic_id="verify-assumptions", description="Verify first")
+    bare_text = okf.to_okf(bare, generated_by="human:me", generated_at=datetime.date(2026, 8, 18))
+    fm_bare = yaml.safe_load(bare_text.split("---", 2)[1])
+    assert fm_bare["title"] == "Verify Assumptions"
+    assert fm_bare["tags"] == []
+    assert okf.from_okf(bare_text).grain.tags == []
+
+
 def test_output_is_structurally_conformant() -> None:
     text = okf.to_okf(_sample_grain(), generated_by="human:me", generated_at=datetime.date(2026, 8, 18))
     assert text.startswith("---\n")
@@ -145,6 +167,7 @@ def test_wire_projection_drops_sender_local_fields() -> None:
     assert fm["type"] == "Grain"
     assert fm["kind"] == "knowledge"
     assert fm["description"]
+    assert fm["tags"] == ["kustomize", "kubernetes"]  # shareable metadata travels
     assert fm["semantic_id"] == "kustomize-patch-strategy"
     assert fm["generated"]["by"] == "human:mikedougherty"
     assert fm["verified"][0]["by"] == "human:james"  # convergence still travels

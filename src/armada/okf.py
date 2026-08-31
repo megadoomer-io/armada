@@ -9,6 +9,9 @@ Field mapping (see dotfiles ``docs/okf-adoption-eval.md``, decisions D1-D5):
 
 - ``type: Grain`` uniformly, with the grain's nature as the ``kind:`` extension  (D2)
 - ``semantic_id`` kept as an extension key = the canonical identity             (D1)
+- ``title`` derived from ``semantic_id`` (humanized); ``tags`` always emitted so
+  the OKF recommended fields (§4.1) are present and ``--strict`` stays clean
+- ``tags`` -> shareable topic tags (travels in the wire view)                   (§4.1)
 - accepted proposals -> ``verified[]``, each carrying a ``group:`` field so
   per-group convergence is reconstructable from the shared concept              (D3=a)
 - ``source_paths`` -> ``sources[].resource``                                    (provenance)
@@ -47,6 +50,17 @@ def _rfc3339(d: datetime.date) -> str:
     return f"{d.isoformat()}T00:00:00Z"
 
 
+def _title_from_semantic_id(semantic_id: str) -> str:
+    """Derive a human-readable OKF `title:` from a grain's semantic_id.
+
+    The semantic_id is the canonical identity (D1) and the only title source armada
+    has, so the title is derived, never stored: a slug like ``kustomize-patch-strategy``
+    becomes ``Kustomize Patch Strategy``. Acronyms lose their casing (``okf`` -> ``Okf``);
+    that is an accepted limitation of humanizing a slug with no other title source.
+    """
+    return semantic_id.replace("-", " ").replace("_", " ").strip().title()
+
+
 @dataclasses.dataclass
 class ParsedGrain:
     """The result of parsing an OKF concept back into armada terms."""
@@ -75,8 +89,14 @@ def to_okf(
     fm: dict[str, Any] = {"type": OKF_TYPE}
     if grain.kind:
         fm["kind"] = grain.kind
+    # title/description/tags are the OKF recommended fields (§4.1). title is always
+    # derived from the identity, and tags is always emitted (empty list when the grain
+    # has none) so the key is present — that is what clears the validator's
+    # "recommended field absent" warning, which keys off key presence, not value.
+    fm["title"] = _title_from_semantic_id(grain.semantic_id)
     if grain.description:
         fm["description"] = grain.description
+    fm["tags"] = list(grain.tags)
     fm["semantic_id"] = grain.semantic_id
     fm["generated"] = {"by": generated_by, "at": _rfc3339(generated_at)}
 
@@ -154,6 +174,7 @@ def from_okf(text: str) -> ParsedGrain:
         semantic_id=fm.get("semantic_id") or "",
         description=fm.get("description", ""),
         kind=fm.get("kind"),
+        tags=list(fm.get("tags") or []),  # title is derived on export, not stored
         disposition=grain_mod.Disposition(disposition) if disposition else None,
         disposition_date=datetime.date.fromisoformat(str(disposition_date)) if disposition_date else None,
         audiences=list(fm.get("audiences") or []),
